@@ -26,7 +26,8 @@ class ContentSchema(ContentBase):
 
     model_config = ConfigDict(
         from_attributes=True,
-        arbitrary_types_allowed=True,
+        # https://docs.pydantic.dev/latest/api/config/#pydantic.config.ConfigDict.validate_assignment
+        arbitrary_types_allowed=True, # разрешает использовать произвольные типы данных !!!!
         json_schema_serialization_defaults_required=True,
         use_enum_values=True
     )
