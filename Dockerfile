@@ -1,24 +1,29 @@
-FROM python:latest
+FROM python:3.12.3-slim
 
 ENV PYTHONDONTWRITEBYTECODE 1
 ENV PYTHONUNBUFFERED 1
 
-RUN apt update -y && \
-    apt install -y python3-dev \
+# Устанавливаем системные зависимости
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+    python3-dev \
     gcc \
     musl-dev \
     libpq-dev \
-    nmap
+    nmap && \
+    rm -rf /var/lib/apt/lists/*
 
-RUN curl -sSL https://install.python-poetry.org | POETRY_HOME=/opt/poetry python3 -
-ENV PATH="/opt/poetry/bin:$PATH"
-RUN poetry config virtualenvs.create false
-
+# Создаем рабочую директорию
 WORKDIR /app
-COPY pyproject.toml poetry.lock* ./
 
-RUN poetry install --no-root --no-interaction --no-ansi
+# Копируем файлы зависимостей
+COPY requirements.txt .
 
+# Устанавливаем зависимости
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Копируем остальные файлы
 COPY . .
 
-CMD ["poetry", "run", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+# Запускаем приложение
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]

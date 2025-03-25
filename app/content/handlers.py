@@ -1,26 +1,28 @@
 from fastapi import APIRouter, Depends, HTTPException
 
-from app.auth.auth_service import AuthService
 from app.content.service import ContentService
-from app.models.schemas import (
-    CommonContentResponse,
-    RoleContentResponse,
-)
-from app.depends import get_content_service, get_auth_service
+from app.content.schemas import ContentSchema
+from app.dependency import get_content_service, get_user_access_level
+from app.content.models import AccessLevel
+
 
 router = APIRouter(prefix="/content")
 
 
-@router.get("/common", response_model=CommonContentResponse)
-async def get_common_content(
+@router.post("/create", response_model=ContentSchema)
+async def create_content(
+    content: ContentSchema,
     content_service: ContentService = Depends(get_content_service)
 ):
-    return content_service.get_common_content()
+    return content_service.create_content(content)
 
 
-@router.get("/role-specific", response_model=RoleContentResponse)
-async def get_role_specific_content(
-    auth_service: AuthService = Depends(get_auth_service),
+@router.get("/get_content/{content_id}", response_model=ContentSchema)
+async def get_commom_content(
+    content_id: int,
+    user_access_level: AccessLevel = Depends(get_user_access_level),
     content_service: ContentService = Depends(get_content_service)
 ):
-    return content_service.get_role_specific_content(auth_service.current_user)
+    return content_service.get_content_by_id(content_id, user_access_level)
+
+

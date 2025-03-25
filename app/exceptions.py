@@ -19,3 +19,11 @@ class RepositoryError(DatabaseError):
 
     def __init__(self, message: str = "Repository error"):
         super().__init__(message)
+
+
+class UserNotFoundException(Exception):
+    detail = "User not found"
+
+
+class UserNotCorrectPasswordException(Exception):
+    detail = "User not correct password"
