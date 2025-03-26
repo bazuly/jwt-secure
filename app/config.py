@@ -1,5 +1,6 @@
-from pydantic_settings import BaseSettings
 from typing import Optional
+
+from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
@@ -16,7 +17,7 @@ class Settings(BaseSettings):
     # JWT settings
     JWT_SECRET_KEY: str
     JWT_ENCODE_ALGORITHM: str = "HS256"
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 120 # 2 hours
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 120  # 2 hours
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7
     # Redis settings
     REDIS_HOST: str = "localhost"
@@ -31,7 +32,7 @@ class Settings(BaseSettings):
     @property
     def db_url(self) -> str:
         return f"{self.DB_DRIVER}://{self.DB_USER}:{self.DB_PASSWORD}@{self.DB_HOST}:{self.DB_PORT}/{self.DB_NAME}"
-    
+
 
 def get_settings() -> Settings:
     return Settings()

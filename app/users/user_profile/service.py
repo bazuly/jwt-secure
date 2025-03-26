@@ -1,8 +1,8 @@
 from dataclasses import dataclass
 
-from app.users.user_profile.schemas import UserCreateProfileSchema, UserLoginSchema
 from app.users.auth.service import AuthService
 from app.users.user_profile.repository import UserProfileRepository
+from app.users.user_profile.schemas import UserCreateProfileSchema, UserLoginSchema
 
 
 @dataclass
@@ -11,7 +11,8 @@ class UserService:
     auth_service: AuthService
 
     async def create_user(self, username: str, password: str) -> UserLoginSchema:
-        user_data_create = UserCreateProfileSchema(username=username, password=password)
+        user_data_create = UserCreateProfileSchema(
+            username=username, password=password)
         user = await self.user_repository.create_user(user_data_create)
         access_token = self.auth_service.generate_access_token(user_id=user.id)
         # print(user)
@@ -26,4 +27,3 @@ class UserService:
             user=user,
             password=password,
         )
-        

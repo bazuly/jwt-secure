@@ -2,18 +2,22 @@ from datetime import datetime, timedelta
 from typing import Any
 
 from fastapi import Request
-from jose import jwt
 from redis.asyncio import Redis
+from jose import jwt
 
 from app.config import settings
 
 # TODO удалить все комментарии
+
+
 class JWTHandler:
     def __init__(self, redis: Redis):
         self.redis = redis
         self.algorithm = settings.JWT_ENCODE_ALGORITHM
-        self.access_token_expire = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
-        self.refresh_token_expire = timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS)
+        self.access_token_expire = timedelta(
+            minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
+        self.refresh_token_expire = timedelta(
+            days=settings.REFRESH_TOKEN_EXPIRE_DAYS)
         self.token_usage_key_prefix = "token_usage:"
         self.token_ip_key_prefix = "token_ip:"
 
@@ -65,11 +69,11 @@ class JWTHandler:
 
         # Получаем текущий IP для токена
         stored_ip = await self.redis.get(token_ip_key)
-        
+
         if stored_ip and stored_ip != client_ip:
             # Если IP отличается от сохраненного, значит токен используется с другого IP
             return False
-            
+
         # Обновляем информацию о последнем использовании
         await self.redis.set(
             token_usage_key,
@@ -81,7 +85,7 @@ class JWTHandler:
             client_ip,
             ex=int(self.access_token_expire.total_seconds())
         )
-        
+
         return True
 
     async def verify_token(self, token: str, request: Request) -> dict[str, Any]:
@@ -91,22 +95,23 @@ class JWTHandler:
                 settings.JWT_SECRET_KEY,
                 algorithms=[self.algorithm]
             )
-            
+
             # Проверяем, не в черном ли списке токен
             if await self.redis.get(f"blacklist:{token}"):
                 raise jwt.JWTError("Token is blacklisted")
-            
+
             # Проверяем, в белом ли списке токен
             token_type = payload.get("type", "access")
             if not await self.redis.get(f"whitelist:{token_type}:{token}"):
                 raise jwt.JWTError("Token not in whitelist")
-            
+
             # Проверяем одновременное использование
             if not await self._check_concurrent_usage(token, request):
                 # Если обнаружено одновременное использование, добавляем токен в черный список
                 await self.blacklist_token(token)
-                raise jwt.JWTError("Token is being used from different IP address")
-            
+                raise jwt.JWTError(
+                    "Token is being used from different IP address")
+
             return payload
         except jwt.JWTError:
             raise jwt.JWTError("Could not validate credentials")
@@ -135,4 +140,4 @@ class JWTHandler:
                 await self.redis.delete(f"{self.token_usage_key_prefix}{token}")
                 await self.redis.delete(f"{self.token_ip_key_prefix}{token}")
         except jwt.JWTError:
-            pass  # Если токен невалидный, ничего не делаем 
+            pass  # Если токен невалидный, ничего не делаем

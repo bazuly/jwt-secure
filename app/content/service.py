@@ -11,14 +11,14 @@ from app.content.models import AccessLevel
 @dataclass
 class ContentService:
     content_repository: ContentRepository
+    # TODO (__name__) или как там правильно в логгерах это указывается
     logger: Logger
 
     def _check_access_level(self, content: ContentSchema, user_access_level: AccessLevel) -> bool:
         access_levels = {
             AccessLevel.PUBLIC: 0,
             AccessLevel.PRIVATE: 1,
-            AccessLevel.RESTRICTED: 2,
-            AccessLevel.SECRET: 3
+            AccessLevel.SECRET: 2
         }
         return access_levels[user_access_level] >= access_levels[content.access_level]
 
@@ -26,8 +26,10 @@ class ContentService:
         content.created_by = user_id
         created_content = await self.content_repository.create_content(content)
         return created_content
-    
+
     async def get_content_by_id(self, content_id: int, user_access_level: AccessLevel) -> ContentSchema:
+        # пользователь должен быть авторизован
+        # также нужна проверка, что токен пользователя не в черном списке, метод в JWTHandler уже описан
         content = await self.content_repository.retrieve_content(content_id)
         if not content:
             self.logger.error(
@@ -35,7 +37,7 @@ class ContentService:
                 content_id,
             )
             raise HTTPException(status_code=404, detail="Content not found")
-        
+
         if not self._check_access_level(content, user_access_level):
             self.logger.error(
                 "Access denied to content %s for user with access level %s",
@@ -43,5 +45,5 @@ class ContentService:
                 user_access_level,
             )
             raise HTTPException(status_code=403, detail="Access denied")
-            
+
         return content
