@@ -2,7 +2,7 @@ import os
 import shutil
 
 
-def set_up():
+def setup_env():
     if not os.path.exists("env_example"):
         raise ValueError("File env_example not found")
 
@@ -14,7 +14,7 @@ def set_up():
 
 
 if __name__ == "__main__":
-    set_up()
+    setup_env()
 
 
 # alemibc скрипт для миграций, чтобы он в докере запускался

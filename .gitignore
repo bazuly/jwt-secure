@@ -2,3 +2,4 @@
 /pycache
 .venv
 .idea
+__pycache__
