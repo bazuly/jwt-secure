@@ -1,24 +1,30 @@
+from typing import AsyncGenerator
+from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
 from sqlalchemy.exc import SQLAlchemyError
-from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
-
-from app.exceptions import RepositoryError
 from app.config import get_settings
 
 settings = get_settings()
 
 engine = create_async_engine(
-    settings.db_url, future=True, echo=True, pool_pre_ping=True)
+    settings.db_url,
+    echo=True,
+    future=True
+)
 
-AsyncSessionFactory = async_sessionmaker(engine, expire_on_commit=False)
+async_session = async_sessionmaker(
+    engine,
+    class_=AsyncSession,
+    expire_on_commit=False
+)
 
 
-async def get_db_session():
-    async with AsyncSessionFactory() as session:
+async def get_db_session() -> AsyncGenerator[AsyncSession, None]:
+    async with async_session() as session:
         try:
             yield session
             await session.commit()
-        except SQLAlchemyError() as e:
+        except SQLAlchemyError as e:
             await session.rollback()
-            raise RepositoryError(f"Database error: {str(e)}")
+            raise e
         finally:
             await session.close()

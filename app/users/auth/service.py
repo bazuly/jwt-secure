@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from logging import Logger
+import logging
 
 from fastapi import HTTPException, status
 from jose import JWTError, jwt
@@ -9,11 +9,12 @@ from app.exceptions import UserNotFoundException, UserNotCorrectPasswordExceptio
 from app.users.user_profile.repository import UserProfileRepository
 from app.users.user_profile.models import UserProfile
 
+logger = logging.getLogger(__name__)
+
 
 @dataclass
 class AuthService:
     user_repository: UserProfileRepository
-    logger: Logger
     settings: Settings
 
     @staticmethod
@@ -36,7 +37,7 @@ class AuthService:
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Could not validate credentials"
             )
-        self.logger.info(f"User {payload['user_id']} logged in")
+        logger.info(f"User {payload['user_id']} logged in")
         return payload["user_id"]
 
 

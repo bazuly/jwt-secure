@@ -21,7 +21,7 @@ class JWTHandler:
         self.token_usage_key_prefix = "token_usage:"
         self.token_ip_key_prefix = "token_ip:"
 
-    async def create_access_token(self, subject: str) -> tuple[str, datetime]:
+    async def create_access_token(self, subject: int) -> tuple[str, datetime]:
         expire = datetime.utcnow() + self.access_token_expire
         to_encode = {
             "exp": expire,
