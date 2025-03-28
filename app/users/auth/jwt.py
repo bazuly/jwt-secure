@@ -60,7 +60,6 @@ class JWTHandler:
         return encoded_jwt, expire
 
     async def _check_concurrent_usage(self, token: str, request: Request) -> bool:
-        """Проверяет, не используется ли токен одновременно с разных IP-адресов"""
         client_ip = request.client.host
         token_usage_key = f"{self.token_usage_key_prefix}{token}"
         token_ip_key = f"{self.token_ip_key_prefix}{token}"
