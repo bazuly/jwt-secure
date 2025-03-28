@@ -22,6 +22,8 @@ services:
       - db_data:/var/lib/postgresql/data
     networks:
       - app_network
+    depends_on:
+      - redis
 
   redis:
     image: redis:alpine

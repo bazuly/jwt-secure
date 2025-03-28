@@ -11,7 +11,6 @@ from app.content.models import AccessLevel
 @dataclass
 class ContentService:
     content_repository: ContentRepository
-    # TODO (__name__) или как там правильно в логгерах это указывается
     logger: Logger
 
     def _check_access_level(self, content: ContentSchema, user_access_level: AccessLevel) -> bool:
