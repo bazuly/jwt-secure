@@ -7,8 +7,6 @@ from jose import jwt
 
 from app.config import settings
 
-# TODO удалить все комментарии
-
 
 class JWTHandler:
     def __init__(self, redis: Redis):
@@ -54,7 +52,6 @@ class JWTHandler:
             settings.JWT_SECRET_KEY,
             algorithm=self.algorithm
         )
-        # Добавляем токен в белый список
         await self.redis.set(
             f"whitelist:refresh:{encoded_jwt}",
             "valid",
@@ -68,14 +65,11 @@ class JWTHandler:
         token_usage_key = f"{self.token_usage_key_prefix}{token}"
         token_ip_key = f"{self.token_ip_key_prefix}{token}"
 
-        # Получаем текущий IP для токена
         stored_ip = await self.redis.get(token_ip_key)
 
         if stored_ip and stored_ip != client_ip:
-            # Если IP отличается от сохраненного, значит токен используется с другого IP
             return False
 
-        # Обновляем информацию о последнем использовании
         await self.redis.set(
             token_usage_key,
             datetime.utcnow().isoformat(),
@@ -97,18 +91,14 @@ class JWTHandler:
                 algorithms=[self.algorithm]
             )
 
-            # Проверяем, не в черном ли списке токен
             if await self.redis.get(f"blacklist:{token}"):
                 raise jwt.JWTError("Token is blacklisted")
 
-            # Проверяем, в белом ли списке токен
             token_type = payload.get("type", "access")
             if not await self.redis.get(f"whitelist:{token_type}:{token}"):
                 raise jwt.JWTError("Token not in whitelist")
 
-            # Проверяем одновременное использование
             if not await self._check_concurrent_usage(token, request):
-                # Если обнаружено одновременное использование, добавляем токен в черный список
                 await self.blacklist_token(token)
                 raise jwt.JWTError(
                     "Token is being used from different IP address")
@@ -126,19 +116,15 @@ class JWTHandler:
             )
             exp = payload.get("exp")
             if exp:
-                # Вычисляем оставшееся время жизни токена
                 expire_time = datetime.fromtimestamp(exp) - datetime.utcnow()
-                # Добавляем токен в черный список
                 await self.redis.set(
                     f"blacklist:{token}",
                     "invalid",
                     ex=int(expire_time.total_seconds())
                 )
-                # Удаляем из белого списка
                 token_type = payload.get("type", "access")
                 await self.redis.delete(f"whitelist:{token_type}:{token}")
-                # Удаляем информацию об использовании
                 await self.redis.delete(f"{self.token_usage_key_prefix}{token}")
                 await self.redis.delete(f"{self.token_ip_key_prefix}{token}")
         except jwt.JWTError:
-            pass  # Если токен невалидный, ничего не делаем
+            pass
