@@ -67,11 +67,9 @@ class JWTHandler:
         token_usage_key = f"{self.token_usage_key_prefix}{token}"
         token_ip_key = f"{self.token_ip_key_prefix}{token}"
 
-        # Получаем текущий IP для токена
         stored_ip = await self.redis.get(token_ip_key)
 
         if stored_ip and stored_ip != client_ip:
-            # Если IP отличается от сохраненного, значит токен используется с другого IP
             return False
 
         # Обновляем информацию о последнем использовании
