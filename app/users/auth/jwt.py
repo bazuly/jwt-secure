@@ -54,7 +54,6 @@ class JWTHandler:
             settings.JWT_SECRET_KEY,
             algorithm=self.algorithm
         )
-        # Добавляем токен в белый список
         await self.redis.set(
             f"whitelist:refresh:{encoded_jwt}",
             "valid",
