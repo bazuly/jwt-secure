@@ -11,7 +11,7 @@ router = APIRouter(prefix="/users", tags=['users'])
 
 @router.post(
     "/create_user",
-    response_model=UserLoginSchema
+    response_model=UserCreateProfileSchema
 )
 async def create_user(
         body: UserCreateProfileSchema,
@@ -19,8 +19,10 @@ async def create_user(
 ):
     return await user_repository.create_user(
         username=body.username,
-        password=body.password
+        password=body.password,
+        access_level=body.access_level
     )
+
 
 @router.get(
     "/login",

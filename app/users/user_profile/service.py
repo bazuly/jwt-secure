@@ -12,11 +12,17 @@ class UserService:
     auth_service: AuthService
     jwt_handler: JWTHandler
 
-    async def create_user(self, username: str, password: str) -> UserLoginSchema:
+    async def create_user(
+        self,
+        username: str,
+        password: str,
+        access_level: str
+    ) -> UserLoginSchema:
         user_data_create = UserCreateProfileSchema(
-            username=username, password=password)
+            username=username, password=password, access_level=access_level
+        )
         user = await self.user_repository.create_user(user_data_create)
-        access_token = self.jwt_handler.create_access_token(subject=user.id)
+        access_token = await self.jwt_handler.create_access_token(subject=user.id)
         # print(user)
         return UserLoginSchema(
             user_id=user.id,

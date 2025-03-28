@@ -21,7 +21,7 @@ class JWTHandler:
         self.token_usage_key_prefix = "token_usage:"
         self.token_ip_key_prefix = "token_ip:"
 
-    async def create_access_token(self, subject: int) -> tuple[str, datetime]:
+    async def create_access_token(self, subject: int) -> str:
         expire = datetime.utcnow() + self.access_token_expire
         to_encode = {
             "exp": expire,
@@ -33,13 +33,14 @@ class JWTHandler:
             settings.JWT_SECRET_KEY,
             algorithm=self.algorithm
         )
-        # Добавляем токен в белый список
+        print(encoded_jwt)
+        print(type(encoded_jwt))
         await self.redis.set(
             f"whitelist:access:{encoded_jwt}",
             "valid",
             ex=int(self.access_token_expire.total_seconds())
         )
-        return encoded_jwt, expire
+        return encoded_jwt
 
     async def create_refresh_token(self, subject: str) -> tuple[str, datetime]:
         expire = datetime.utcnow() + self.refresh_token_expire
