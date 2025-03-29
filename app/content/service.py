@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from logging import Logger
+import logging
 
 from fastapi import HTTPException
 
@@ -8,10 +8,12 @@ from app.content.schemas import ContentSchema
 from app.content.models import AccessLevel
 
 
+logger = logging.getLogger(__name__)
+
+
 @dataclass
 class ContentService:
     content_repository: ContentRepository
-    logger: Logger
 
     def _check_access_level(self, content: ContentSchema, user_access_level: AccessLevel) -> bool:
         access_levels = {
@@ -21,24 +23,21 @@ class ContentService:
         }
         return access_levels[user_access_level] >= access_levels[content.access_level]
 
-    async def create_content(self, content: ContentSchema, user_id: int) -> ContentSchema:
-        content.created_by = user_id
+    async def create_content(self, content: ContentSchema) -> ContentSchema:
         created_content = await self.content_repository.create_content(content)
         return created_content
 
     async def get_content_by_id(self, content_id: int, user_access_level: AccessLevel) -> ContentSchema:
-        # пользователь должен быть авторизован
-        # также нужна проверка, что токен пользователя не в черном списке, метод в JWTHandler уже описан
         content = await self.content_repository.retrieve_content(content_id)
         if not content:
-            self.logger.error(
+            logger.error(
                 "Content not found, content_id: %s",
                 content_id,
             )
             raise HTTPException(status_code=404, detail="Content not found")
 
         if not self._check_access_level(content, user_access_level):
-            self.logger.error(
+            logger.error(
                 "Access denied to content %s for user with access level %s",
                 content_id,
                 user_access_level,
