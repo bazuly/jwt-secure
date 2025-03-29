@@ -1,6 +1,7 @@
 from pydantic import BaseModel, ConfigDict
 
 from app.content.models import AccessLevel
+from app.users.user_profile.password import get_password_hash
 
 
 class UserCreateProfileSchema(BaseModel):
@@ -14,13 +15,8 @@ class UserCreateProfileSchema(BaseModel):
         use_enum_values=True
     )
 
-
-class UserLoginSchema(BaseModel):
-    user_id: int
-    access_token: str
-
-    model_config = ConfigDict(
-        arbitrary_types_allowed=True,
-        json_schema_serialization_defaults_required=True,
-        use_enum_values=True
-    )
+    # хэширование пароля
+    def get_hashed_password(self) -> str | None:
+        if self.password:
+            return get_password_hash(self.password)
+        return None

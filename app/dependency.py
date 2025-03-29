@@ -47,8 +47,15 @@ def get_jwt_handler(redis: Redis = Depends(get_redis)) -> JWTHandler:
     return JWTHandler(redis)
 
 
-def get_auth_service(user_repository: UserProfileRepository = Depends(get_user_repository)) -> AuthService:
-    return AuthService(user_repository=user_repository, settings=settings)
+def get_auth_service(
+    user_repository: UserProfileRepository = Depends(get_user_repository),
+    jwt_handler: JWTHandler = Depends(get_jwt_handler)
+) -> AuthService:
+    return AuthService(
+        user_repository=user_repository,
+        settings=settings,
+        jwt_handler=jwt_handler
+    )
 
 
 async def get_user_service(
@@ -56,4 +63,8 @@ async def get_user_service(
     jwt_handler: JWTHandler = Depends(get_jwt_handler),
     auth_service: AuthService = Depends(get_auth_service)
 ) -> UserService:
-    return UserService(user_repository=user_repository, jwt_handler=jwt_handler, auth_service=auth_service)
+    return UserService(
+        user_repository=user_repository,
+        jwt_handler=jwt_handler,
+        auth_service=auth_service
+    )
