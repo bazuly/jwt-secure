@@ -14,7 +14,7 @@ async def create_content(
     content: ContentSchema,
     content_service: ContentService = Depends(get_content_service)
 ):
-    return content_service.create_content(content)
+    return await content_service.create_content(content)
 
 
 @router.get("/get_content/{content_id}", response_model=ContentSchema)
@@ -23,4 +23,4 @@ async def get_content(
     user_access_level: AccessLevel = Depends(get_user_access_level),
     content_service: ContentService = Depends(get_content_service)
 ):
-    return content_service.get_content_by_id(content_id, user_access_level)
+    return await content_service.get_content_by_id(content_id, user_access_level)
