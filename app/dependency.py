@@ -1,3 +1,4 @@
+import logging
 from fastapi import Depends, Request
 from redis.asyncio import Redis, from_url
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -12,6 +13,8 @@ from app.content.models import AccessLevel
 from app.users.user_profile.repository import UserProfileRepository
 from app.users.user_profile.service import UserService
 
+logger = logging.getLogger(__name__)
+
 
 async def get_redis():
     redis = await from_url(
@@ -21,7 +24,12 @@ async def get_redis():
         decode_responses=True
     )
     try:
+        await redis.ping()
+        logger.info("Successfully connected to Redis")
         yield redis
+    except Exception as e:
+        logger.error(f"Failed to connect to Redis: {str(e)}")
+        raise
     finally:
         await redis.close()
 
@@ -54,11 +62,20 @@ async def get_user_access_level(
     user_repository: UserProfileRepository = Depends(get_user_repository),
     jwt_handler: JWTHandler = Depends(get_jwt_handler),
 ) -> AccessLevel:
-    # First try to get token from headers
+    """
+    Логика работы метода:
+    1. Получаем токен из хедера запроса
+    2. Если токен не найден, пытаемся получить его из параметров запроса
+    3. Если токен не найден, возвращаем PUBLIC
+    4. Если токен найден, проверяем его валидность
+    5. Если токен валиден, возвращаем уровень доступа пользователя
+    """
+
+    # лучше конечно вынести в отдельный метод
+    # а то это фигня, а не DDD
     access_token = request.headers.get(
         "Authorization", "").replace("Bearer ", "")
 
-    # If no token in headers, try to get from query parameters
     if not access_token:
         access_token = request.query_params.get("access_token", "")
 

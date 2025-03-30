@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta
+import logging
 from typing import Any
 
 from fastapi import Request
@@ -6,6 +7,8 @@ from redis.asyncio import Redis
 from jose import jwt
 
 from app.config import settings
+
+logger = logging.getLogger(__name__)
 
 
 class JWTHandler:
@@ -20,25 +23,29 @@ class JWTHandler:
         self.token_ip_key_prefix = "token_ip:"
 
     async def create_access_token(self, subject: int) -> str:
-        expire = datetime.utcnow() + self.access_token_expire
-        to_encode = {
-            "exp": expire,
-            "sub": str(subject),
-            "type": "access"
-        }
-        encoded_jwt = jwt.encode(
-            to_encode,
-            settings.JWT_SECRET_KEY,
-            algorithm=self.algorithm
-        )
-        print(encoded_jwt)
-        print(type(encoded_jwt))
-        await self.redis.set(
-            f"whitelist:access:{encoded_jwt}",
-            "valid",
-            ex=int(self.access_token_expire.total_seconds())
-        )
-        return encoded_jwt
+        try:
+            expire = datetime.utcnow() + self.access_token_expire
+            to_encode = {
+                "exp": expire,
+                "sub": str(subject),
+                "type": "access"
+            }
+            encoded_jwt = jwt.encode(
+                to_encode,
+                settings.JWT_SECRET_KEY,
+                algorithm=self.algorithm
+            )
+
+            whitelist_key = f"whitelist:access:{encoded_jwt}"
+            await self.redis.set(
+                whitelist_key,
+                "valid",
+                ex=int(self.access_token_expire.total_seconds())
+            )
+            return encoded_jwt
+        except Exception as e:
+            logger.error(f"Error creating access token: {str(e)}")
+            raise
 
     async def create_refresh_token(self, subject: str) -> tuple[str, datetime]:
         expire = datetime.utcnow() + self.refresh_token_expire
@@ -61,13 +68,27 @@ class JWTHandler:
 
     # проверка, не используется ли токен одновременно с разных IP-адресов
     async def _check_concurrent_usage(self, token: str, request: Request) -> bool:
-        client_ip = request.client.host
+        # По сути подход с x-forwarded-for - самый распространённый способ получения ip-адреса клиента,
+        # если мы используем прокси-серверы. Обычно это nginx, но в нашем случае это uvicorn.
+        # Неплохая статья про X-Forwarded-For
+        # https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/X-Forwarded-For
+        forwarded_for = request.headers.get("X-Forwarded-For", "")
+        if forwarded_for:
+            client_ip = forwarded_for.split(",")[0].strip()
+        else:
+            client_ip = request.client.host
+
+        logger.info(f"Checking concurrent usage for IP: {client_ip}")
+
         token_usage_key = f"{self.token_usage_key_prefix}{token}"
         token_ip_key = f"{self.token_ip_key_prefix}{token}"
 
         stored_ip = await self.redis.get(token_ip_key)
+        logger.info(f"Stored IP: {stored_ip}")
 
         if stored_ip and stored_ip != client_ip:
+            logger.info(
+                f"IP mismatch: stored={stored_ip}, current={client_ip}")
             return False
 
         await self.redis.set(
@@ -80,7 +101,6 @@ class JWTHandler:
             client_ip,
             ex=int(self.access_token_expire.total_seconds())
         )
-
         return True
 
     async def verify_token(self, token: str, request: Request) -> dict[str, Any]:
@@ -92,7 +112,6 @@ class JWTHandler:
             )
 
             if await self.redis.get(f"blacklist:{token}"):
-
                 raise jwt.JWTError("Token is blacklisted")
 
             token_type = payload.get("type", "access")
