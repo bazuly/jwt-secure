@@ -59,6 +59,7 @@ class JWTHandler:
         )
         return encoded_jwt, expire
 
+    # проверка, не используется ли токен одновременно с разных IP-адресов
     async def _check_concurrent_usage(self, token: str, request: Request) -> bool:
         client_ip = request.client.host
         token_usage_key = f"{self.token_usage_key_prefix}{token}"
@@ -91,6 +92,7 @@ class JWTHandler:
             )
 
             if await self.redis.get(f"blacklist:{token}"):
+
                 raise jwt.JWTError("Token is blacklisted")
 
             token_type = payload.get("type", "access")
@@ -103,8 +105,10 @@ class JWTHandler:
                     "Token is being used from different IP address")
 
             return payload
-        except jwt.JWTError:
+        except jwt.JWTError as e:
             raise jwt.JWTError("Could not validate credentials")
+        except Exception as e:
+            raise
 
     async def blacklist_token(self, token: str) -> None:
         try:
@@ -127,3 +131,6 @@ class JWTHandler:
                 await self.redis.delete(f"{self.token_ip_key_prefix}{token}")
         except jwt.JWTError:
             pass
+
+    async def is_token_blacklisted(self, access_token: str) -> bool:
+        return await self.redis.get(f"blacklist:{access_token}") is not None

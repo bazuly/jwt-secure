@@ -5,6 +5,7 @@ from app.users.user_profile.repository import UserProfileRepository
 from app.users.user_profile.schemas import UserCreateProfileSchema
 from app.users.auth.schemas import AuthResponseSchema
 from app.users.auth.jwt import JWTHandler
+from app.content.models import AccessLevel
 
 
 @dataclass
@@ -17,7 +18,7 @@ class UserService:
         self,
         username: str,
         password: str,
-        access_level: str
+        access_level: AccessLevel
     ) -> AuthResponseSchema:
         user_data_create = UserCreateProfileSchema(
             username=username, password=password, access_level=access_level

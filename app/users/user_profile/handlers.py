@@ -1,10 +1,7 @@
-from typing import Annotated
-
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends
 from fastapi.security import OAuth2PasswordRequestForm
 
-from app.dependency import get_user_service, get_auth_service, get_jwt_handler
-from app.users.auth.middleware import JWTBearer
+from app.dependency import get_user_service, get_auth_service
 from app.users.user_profile.schemas import UserCreateProfileSchema
 from app.users.auth.schemas import AuthResponseSchema
 from app.users.user_profile.service import UserService
@@ -21,11 +18,15 @@ async def register(
     """
     Register endpoint that creates a new user and returns JWT access token.
     """
-    return await user_service.create_user(
+    # TODO: убрать принты
+    print(f"Creating user with access level: {user_data.access_level}")
+    result = await user_service.create_user(
         username=user_data.username,
         password=user_data.password,
         access_level=user_data.access_level
     )
+    print(f"Created user with ID: {result.user_id}")
+    return result
 
 
 @router.post("/login", response_model=AuthResponseSchema)
@@ -40,15 +41,3 @@ async def login(
         username=form_data.username,
         password=form_data.password
     )
-
-
-@router.post("/logout")
-async def logout(
-    credentials: dict = Depends(JWTBearer(Depends(get_jwt_handler))),
-    auth_service: AuthService = Depends(get_auth_service)
-):
-    """
-    Logout endpoint that invalidates the current token.
-    """
-    await auth_service.jwt_handler.blacklist_token(credentials.credentials)
-    return {"message": "Successfully logged out"}

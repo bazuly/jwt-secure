@@ -18,3 +18,14 @@ class ContentSchema(BaseModel):
 
 class ContentCreate(ContentSchema):
     pass
+
+
+class ContentRetrieveSchema(ContentSchema):
+    content_name: str
+    content_data: str
+
+    model_config = ConfigDict(
+        arbitrary_types_allowed=True,
+        json_schema_serialization_defaults_required=True,
+        use_enum_values=True
+    )

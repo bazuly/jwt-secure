@@ -1,4 +1,4 @@
-from fastapi import Depends
+from fastapi import Depends, Request
 from redis.asyncio import Redis, from_url
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -26,25 +26,59 @@ async def get_redis():
         await redis.close()
 
 
+def get_jwt_handler(redis: Redis = Depends(get_redis)) -> JWTHandler:
+    return JWTHandler(redis)
+
+
 async def get_content_repository(db_session: AsyncSession = Depends(get_db_connection)) -> ContentRepository:
     return ContentRepository(db_session=db_session)
 
 
-async def get_content_service(content_repository: ContentRepository = Depends(get_content_repository)) -> ContentService:
-    return ContentService(content_repository=content_repository)
-
-
-# ????
-async def get_user_access_level(redis: Redis = Depends(get_redis)) -> AccessLevel:
-    return AccessLevel.PUBLIC
+async def get_content_service(
+    content_repository: ContentRepository = Depends(get_content_repository),
+    jwt_handler: JWTHandler = Depends(get_jwt_handler),
+) -> ContentService:
+    return ContentService(
+        content_repository=content_repository,
+        jwt_handler=jwt_handler
+    )
 
 
 async def get_user_repository(db_session: AsyncSession = Depends(get_db_connection)) -> UserProfileRepository:
     return UserProfileRepository(db_session=db_session)
 
 
-def get_jwt_handler(redis: Redis = Depends(get_redis)) -> JWTHandler:
-    return JWTHandler(redis)
+async def get_user_access_level(
+    request: Request,
+    redis: Redis = Depends(get_redis),
+    user_repository: UserProfileRepository = Depends(get_user_repository),
+    jwt_handler: JWTHandler = Depends(get_jwt_handler),
+) -> AccessLevel:
+    # First try to get token from headers
+    access_token = request.headers.get(
+        "Authorization", "").replace("Bearer ", "")
+
+    # If no token in headers, try to get from query parameters
+    if not access_token:
+        access_token = request.query_params.get("access_token", "")
+
+    if not access_token:
+        return AccessLevel.PUBLIC
+
+    try:
+        payload = await jwt_handler.verify_token(access_token, request)
+        user_id = int(payload["sub"])
+        user = await user_repository.get_user_by_id(user_id)
+        if user:
+            print(
+                f"Found user with ID {user_id}, access level: {user.access_level}")
+            return user.access_level
+        else:
+            print(f"User with ID {user_id} not found")
+            return AccessLevel.PUBLIC
+    except Exception as e:
+        print(f"Error getting user access level: {str(e)}")
+        return AccessLevel.PUBLIC
 
 
 def get_auth_service(

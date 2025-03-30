@@ -25,3 +25,6 @@ class ContentModel(Base):
         default=AccessLevel.PUBLIC,
         nullable=False
     )
+
+    class Config:
+        from_attributes = True
