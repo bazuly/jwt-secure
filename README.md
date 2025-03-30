@@ -30,9 +30,11 @@ cd jwt-secure
 python setup.py
 ```
 
-3. Start the application using Docker Compose:
+3. Start the application and do migrations using Docker Compose:
 ```bash
-docker-compose up --build
+docker-compose up --build -d
+docker-compose exec web alembic upgread head
+docker-compose exec web alembic revision --autogenerate -m "initial"
 ```
 
 The application will be available at `http://localhost:8000`
