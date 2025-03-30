@@ -42,18 +42,19 @@ class ContentRepository:
 
     async def retrieve_content(
         self,
-        content_id: int,
+        content_name: str,
     ) -> Optional[ContentModel]:
-        query = select(ContentModel).where(ContentModel.id == content_id)
+        query = select(ContentModel).where(
+            ContentModel.content_name == content_name)
 
         try:
             result = await self.db_session.execute(query)
             content = result.scalar_one_or_none()
 
             if content:
-                self.logger.debug("Content found: ID %d", content_id)
+                self.logger.debug("Content found: ID %d", content_name)
             else:
-                self.logger.warning("Content not found: ID %d", content_id)
+                self.logger.warning("Content not found: ID %d", content_name)
 
             return content
 
